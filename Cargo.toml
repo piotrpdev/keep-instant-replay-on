@@ -7,7 +7,7 @@ rust-version = "1.85.0"
 description = "Enable Nvidia ShadowPlay Instant Replay when it isn't."
 repository = "https://github.com/piotrpdev/keep-instant-replay-on"
 license = "GPL-3.0"
-keywords = ["nvidia", "shadowplay", "instant replay"]
+keywords = ["nvidia", "shadowplay", "instant", "replay"]
 categories = ["command-line-utilities"]
 
 [dependencies]
