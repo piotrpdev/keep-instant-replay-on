@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::str::FromStr;
 use std::time::Duration;
+use std::{env, panic, slice, thread};
 use std::{ffi::CStr, fmt};
-use std::{panic, slice, thread};
+use tracing::level_filters::LevelFilter;
 use tracing::{debug, error, info};
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -19,6 +20,11 @@ use windows::{
     },
     core::PCSTR,
 };
+
+#[cfg(debug_assertions)]
+const DEFAULT_LOG_FILTER: LevelFilter = LevelFilter::DEBUG;
+#[cfg(not(debug_assertions))]
+const DEFAULT_LOG_FILTER: LevelFilter = LevelFilter::INFO;
 
 #[allow(clippy::doc_markdown)]
 #[derive(Clone, Debug, FromArgs)]
@@ -256,23 +262,13 @@ fn setup_logger(log_path: String) -> anyhow::Result<()> {
 
     let subscriber = tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME"),).into()),
-        )
-        .with(tracing_subscriber::fmt::layer().with_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                format!(
-                    "{}{}",
-                    env!("CARGO_CRATE_NAME"),
-                    if cfg!(debug_assertions) {
-                        "=debug"
-                    } else {
-                        "=info"
-                    },
+            tracing_subscriber::fmt::layer().with_filter(
+                LevelFilter::from_str(
+                    &env::var("RUST_LOG").unwrap_or_else(|_| "bad_var".to_string()),
                 )
-                .into()
-            }),
-        ))
+                .unwrap_or(DEFAULT_LOG_FILTER),
+            ),
+        )
         .with(
             tracing_subscriber::fmt::layer()
                 .with_ansi(false)
@@ -304,6 +300,7 @@ fn setup_logger(log_path: String) -> anyhow::Result<()> {
 fn run() -> anyhow::Result<()> {
     let args: CliArgs = argh::from_env();
 
+    #[cfg(debug_assertions)]
     dbg!(&args);
 
     setup_logger(args.log_path).context("Failed to set up logger")?;
